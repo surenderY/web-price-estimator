@@ -1,0 +1,650 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - DjangoApp{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ...existing CSS above ... */
+
+    /* Left navigation panel as persistent sidebar on wider screens */
+    .dashboard-layout {
+        display: flex;
+        align-items: flex-start;
+        gap: 20px;
+    }
+
+    /* Hide sidebar by default to avoid overlapping form; will be shown via burger toggle */
+    .sidebar {
+        display: none;
+    }
+
+    /* Off-canvas sidebar when toggled */
+    body.sidebar-open .sidebar {
+        display: block;
+        position: fixed;
+        left: 0;
+        top: 0;
+        height: 100vh;
+        width: 280px;
+        z-index: 1200;
+        background: rgba(255,255,255,0.98);
+        box-shadow: 0 12px 40px rgba(2,6,23,0.12);
+        padding: 16px;
+        transform: translateX(-100%);
+        transition: transform 280ms ease;
+        overflow-y: auto;
+        border-radius: 0 10px 10px 0;
+    }
+    /* Slide in */
+    body.sidebar-open .sidebar.show {
+        transform: translateX(0);
+    }
+
+    /* Keep the layout sane (main content fills) */
+    .flex-grow-1 {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    /* Overlay is handled by the site-wide overlay (.site-sidebar-overlay) */
+
+    /* (burger button styling removed - site-wide burger is in base.html) */
+
+    /* Ensure default large-screen sticky sidebar isn't used (we hide default behavior) */
+    @media (min-width: 768px) {
+        /* keep using off-canvas for all sizes so no overlap occurs; modify here if you want persistent sidebar on large screens */
+    }
+
+    /* Navigation link styling inside sidebar */
+    .sidebar .nav-link {
+        color: var(--dark-color, #111827);
+        padding: 10px 12px;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .sidebar .nav-link:hover {
+        background: rgba(0,0,0,0.03);
+        text-decoration: none;
+    }
+
+    /* SKU tables: make first column 70% and second 30% */
+    .chart-card .table {
+        table-layout: fixed; /* enforce column widths */
+        width: 100%;
+    }
+    .chart-card .table td:first-child,
+    .chart-card .table th:first-child {
+        width: 70%;
+    }
+    .chart-card .table td:last-child,
+    .chart-card .table th:last-child {
+        width: 30%;
+    }
+    .chart-card .table select.form-select,
+    .chart-card .table input.form-control {
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    /* On small screens, keep form full width and sidebar hidden until toggled */
+    @media (max-width: 767.98px) {
+        .dashboard-layout { display: block; }
+        .sidebar { display: none; }
+    }
+
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <div class="container">
+        <!-- site-wide burger is in the navbar (base.html); no local burger here -->
+
+        <div class="dashboard-layout">
+            <!-- Sidebar -->
+            <!-- <aside class="sidebar" id="main-sidebar" aria-hidden="true">
+                <nav class="nav flex-column">
+                    <a class="nav-link active" href="#">
+                        <i class="fas fa-th-large"></i>
+                        SKUs Management
+                    </a>
+                    <a class="nav-link" href="{% url 'workorders' %}">
+                        <i class="fas fa-clipboard-list"></i>
+                        Workorders
+                    </a>
+                    <a class="nav-link" href="{% url 'price-estimator' %}">
+                        <i class="fas fa-calculator"></i>
+                        Price Estimator
+                    </a>
+                </nav>
+            </aside> -->
+
+            <!-- overlay is created dynamically by the site-wide script when needed -->
+
+            <!-- Main content -->
+            <div class="flex-grow-1">
+                <!-- Welcome Section -->
+                <div class="welcome-section">
+                    <div class="row align-items-center">
+                        <div class="col-12">
+                            <h1 class="text-center">Work order form</h1>
+                            
+                            <form id="workorder-form" method="post" class="mt-4">
+                                {% csrf_token %}
+                                <div class="row g-3">
+                                    <!-- ...existing form fields... -->
+                                    <div class="col-md-4">
+                                        <label for="project_name" class="form-label">Work Order Number</label>
+                                        <input type="text" id="project_name" name="project_name" class="form-control" placeholder="Work Order #">
+                                    </div>
+
+                                    <div class="col-md-4">
+                                        <label for="client" class="form-label">Customer</label>
+                                        <input type="text" id="client" name="client" class="form-control" placeholder="Customer name">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label for="work_order_date" class="form-label">Work Order Date</label>
+                                        <input type="date" id="work_order_date" name="work_order_date" class="form-control">
+                                    </div>
+                            
+                                    <div class="col-md-4">
+                                        <label for="google_legal_entity" class="form-label">Google Legal Entity</label>
+                                        <input type="text" id="google_legal_entity" name="google_legal_entity" class="form-control" placeholder="Legal entity name">
+                                    </div>
+
+                                    <div class="col-md-4">
+                                        <label for="google_bill_to_address" class="form-label">Google Bill-to Address</label>
+                                        <input type="text" id="google_bill_to_address" name="google_bill_to_address" class="form-control" placeholder="Bill-to address">
+                                    </div>
+
+                                    <div class="col-md-4">
+                                        <label for="google_ship_to_address" class="form-label">Google Ship-to Address</label>
+                                        <input type="text" id="google_ship_to_address" name="google_ship_to_address" class="form-control" placeholder="Ship-to address">
+                                    </div>
+
+                                    <div class="col-md-4">
+                                        <label for="sector" class="form-label">Sector</label>
+                                        <select id="sector" name="sector" class="form-select" required>
+                                            <option value="Public">Public Sector</option>
+                                            <option value="Commercial">Commercial Sector</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="col-md-4">
+                                        <label for="term" class="form-label">Term</label>
+                                        <select id="term" name="term" class="form-select" required>
+                                            <option value="60">60</option>
+                                            <option value="45">45</option>
+                                            <option value="30">30</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="col-md-4">
+                                        <label for="support" class="form-label">Support</label>
+                                        <select id="support" name="support" class="form-select" required>
+                                            <option value="4hr">4hr OS</option>
+                                            <option value="nbd">NBD</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label for="Country" class="form-label">Country</label>
+                                        <select id="Country" name="Country" class="form-select country-select" required>
+                                            <option value="">Loading countries...</option>
+                                        </select>
+                                    </div>
+
+                                    <!-- force next columns to a new row so the chart cards sit side-by-side -->
+                                    <div class="w-100"></div>
+
+                                    <div class="col-12 col-md-6">
+                                        <div class="chart-card">
+                                            <h5>SKU details</h5>
+                                            <div class="table-responsive">
+                                                <table class="table align-middle mb-0">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>SKU Name</th>
+                                                            <th>Quantity</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <tr>
+                                                            <td>
+                                                                <select name="primary_sku_name_1" class="form-select primary-sku-select">
+                                                                    <option value="">Select SKU</option>
+                                                                    <!-- options will be populated from API -->
+                                                                </select>
+                                                            </td>
+                                                            <td><input type="number" name="additional_sku_qty_1" class="form-control" min="0"></td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>
+                                                                <select name="primary_sku_name_2" class="form-select primary-sku-select">
+                                                                    <option value="">Select SKU</option>
+                                                                    <!-- options will be populated from API -->
+                                                                </select>
+                                                            </td>
+                                                            <td><input type="number" name="additional_sku_qty_2" class="form-control" min="0"></td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>
+                                                                <select name="primary_sku_name_3" class="form-select primary-sku-select">
+                                                                    <option value="">Select SKU</option>
+                                                                    <!-- options will be populated from API -->
+                                                                </select>
+                                                            </td>
+                                                            <td><input type="number" name="additional_sku_qty_3" class="form-control" min="0"></td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>
+                                                                <select name="primary_sku_name_4" class="form-select primary-sku-select">
+                                                                    <option value="">Select SKU</option>
+                                                                    <!-- options will be populated from API -->
+                                                                </select>
+                                                            </td>
+                                                            <td><input type="number" name="additional_sku_qty_4" class="form-control" min="0"></td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>
+                                                                <select name="primary_sku_name_5" class="form-select primary-sku-select">
+                                                                    <option value="">Select SKU</option>
+                                                                    <!-- options will be populated from API -->
+                                                                </select>
+                                                            </td>
+                                                            <td><input type="number" name="additional_sku_qty_5" class="form-control" min="0"></td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-12 col-md-6">
+                                        <div class="chart-card mt-3 mt-md-0">
+                                            <h5>Additional SKU details</h5>
+                                            <div class="table-responsive">
+                                                <table class="table align-middle mb-0">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>SKU Name</th>
+                                                            <th>Quantity</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <tr>
+                                                            <td>
+                                                                <select name="additional_sku_name_1" class="form-select additional-sku-select">
+                                                                    <option value="">Select SKU</option>
+                                                                    <!-- options will be populated from API -->
+                                                                </select>
+                                                            </td>
+                                                            <td><input type="number" name="additional_sku_qty_1" class="form-control" min="0"></td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>
+                                                                <select name="additional_sku_name_2" class="form-select additional-sku-select">
+                                                                    <option value="">Select SKU</option>
+                                                                    <!-- options will be populated from API -->
+                                                                </select>
+                                                            </td>
+                                                            <td><input type="number" name="additional_sku_qty_2" class="form-control" min="0"></td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>
+                                                                <select name="additional_sku_name_3" class="form-select additional-sku-select">
+                                                                    <option value="">Select SKU</option>
+                                                                    <!-- options will be populated from API -->
+                                                                </select>
+                                                            </td>
+                                                            <td><input type="number" name="additional_sku_qty_3" class="form-control" min="0"></td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>
+                                                                <select name="additional_sku_name_4" class="form-select additional-sku-select">
+                                                                    <option value="">Select SKU</option>
+                                                                    <!-- options will be populated from API -->
+                                                                </select>
+                                                            </td>
+                                                            <td><input type="number" name="additional_sku_qty_4" class="form-control" min="0"></td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>
+                                                                <select name="additional_sku_name_5" class="form-select additional-sku-select">
+                                                                    <option value="">Select SKU</option>
+                                                                    <!-- options will be populated from API -->
+                                                                </select>
+                                                            </td>
+                                                            <td><input type="number" name="additional_sku_qty_5" class="form-control" min="0"></td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- spacer to ensure three columns per row -->
+                                    <div class="col-md-4 d-none d-md-block"></div>
+
+                                    <div class="col-12">
+                                        <label for="notes" class="form-label">Additional Notes</label>
+                                        <textarea id="notes" name="notes" class="form-control" rows="4" placeholder="Any additional notes"></textarea>
+                                    </div>
+
+                                    <div class="col-12">
+                                        <div class="d-flex gap-2 mt-2">
+                                            <button id="save-workorder" type="submit" class="btn btn-primary">Save</button>
+                                            <button type="reset" class="btn btn-outline-secondary">Reset</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </form></div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Consolidated JS: burger toggle, countries, SKUs, form submit and edit loading.
+    console.log('Dashboard loaded for user:', '{{ user.email }}');
+
+    (function () {
+        // Sidebar toggle is handled globally in base.html; this IIFE contains page-specific logic only.
+
+        // Load countries from API and populate all selects with .country-select
+        async function loadCountries() {
+            const selects = document.querySelectorAll('select.country-select');
+            if (!selects.length) return [];
+
+            // show a loading option
+            selects.forEach(s => { s.innerHTML = '<option value="">Loading countries...</option>'; });
+
+            try {
+                const res = await fetch('/api/auth/countries/');
+                if (!res.ok) throw new Error('Network response was not ok');
+                const data = await res.json();
+                // support both paginated responses ({results: [...]}) and plain arrays
+                const items = Array.isArray(data) ? data : (data.results || []);
+
+                selects.forEach(s => {
+                    // reset and add default
+                    s.innerHTML = '<option value="">Select country</option>';
+                    items.forEach(c => {
+                        const opt = document.createElement('option');
+                        opt.value = c.code;
+                        opt.textContent = c.name;
+                        s.appendChild(opt);
+                    });
+                });
+                return items;
+            } catch (err) {
+                console.error('Failed to load countries', err);
+                selects.forEach(s => { s.innerHTML = '<option value="">Unable to load countries</option>'; });
+                return [];
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadCountries);
+
+        // Fetch SKUs for a country and populate SKU selects
+        async function fetchSKUs(code) {
+            try {
+                const res = await fetch(`/api/auth/countries/${encodeURIComponent(code)}/skus/`);
+                try {
+                    const cloneJson = await res.clone().json().catch(() => null);
+                    console.log('API response:', cloneJson || 'No JSON body');
+                } catch (e) { /* ignore logging issues */ }
+                if (!res.ok) return { primary_skus: [], additional_skus: [] };
+                return await res.json();
+            } catch (err) {
+                console.error('Failed to fetch SKUs', err);
+                return { primary_skus: [], additional_skus: [] };
+            }
+        }
+
+        function populateSKUSelects(list, selector) {
+            const selects = document.querySelectorAll(selector);
+            console.log('Populating SKU selects with:', list);
+            selects.forEach(s => {
+                s.innerHTML = '<option value="">Select SKU</option>';
+                (list || []).forEach(item => {
+                    const opt = document.createElement('option');
+                    opt.value = item;
+                    opt.textContent = item;
+                    s.appendChild(opt);
+                });
+            });
+        }
+
+        // Listen for country selection changes (works for dynamically loaded country selects)
+        document.addEventListener('change', async (e) => {
+            if (!e.target || !e.target.matches || !e.target.matches('.country-select')) return;
+            const code = e.target.value;
+            if (!code) {
+                populateSKUSelects([], '.primary-sku-select');
+                populateSKUSelects([], '.additional-sku-select');
+                return;
+            }
+
+            const data = await fetchSKUs(code);
+            populateSKUSelects(data.primary_skus, '.primary-sku-select');
+            populateSKUSelects(data.additional_skus, '.additional-sku-select');
+        });
+
+        // Helper to read CSRF token from cookie
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+        }
+
+        // Handle dashboard form submit via AJAX
+        document.addEventListener('DOMContentLoaded', () => {
+            const form = document.getElementById('workorder-form');
+            if (!form) return;
+
+            const params = new URLSearchParams(window.location.search);
+            const editId = params.get('edit');
+
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                // Frontend validation for required fields
+                const sectorVal = (document.getElementById('sector') || {}).value || '';
+                const termVal = (document.getElementById('term') || {}).value || '';
+                const supportVal = (document.getElementById('support') || {}).value || '';
+                // get index of country select for better error focus
+                const countryVal = Array.from(document.querySelectorAll('select')).indexOf(document.getElementById('Country'));
+                const countryCode = (document.getElementById('Country') || {}).value || '';
+
+                // Collect simple fields
+                const payload = {
+                    work_order_number: (document.getElementById('project_name') || {}).value || '',
+                    client: (document.getElementById('client') || {}).value || '',
+                    work_order_date: (document.getElementById('work_order_date') || {}).value || '',
+                    google_legal_entity: (document.getElementById('google_legal_entity') || {}).value || '',
+                    google_bill_to_address: (document.getElementById('google_bill_to_address') || {}).value || '',
+                    google_ship_to_address: (document.getElementById('google_ship_to_address') || {}).value || '',
+                    sector: sectorVal,
+                    term: termVal,
+                    support: supportVal,
+                    country: countryCode,
+                    notes: (document.getElementById('notes') || {}).value || '',
+                };
+                if (editId) payload.id = editId;
+
+                // Collect primary SKUs (pair selects with the numeric input in same row)
+                payload.primary_skus = [];
+                document.querySelectorAll('.primary-sku-select').forEach(sel => {
+                    const tr = sel.closest('tr');
+                    const qty = tr ? tr.querySelector('input[type="number"]') : null;
+                    const sku = sel.value;
+                    const q = qty ? (qty.value ? parseInt(qty.value, 10) : 0) : 0;
+                    if (sku) payload.primary_skus.push({ sku: sku, qty: q });
+                });
+
+                // Collect additional SKUs
+                payload.additional_skus = [];
+                document.querySelectorAll('.additional-sku-select').forEach(sel => {
+                    const tr = sel.closest('tr');
+                    const qty = tr ? tr.querySelector('input[type="number"]') : null;
+                    const sku = sel.value;
+                    const q = qty ? (qty.value ? parseInt(qty.value, 10) : 0) : 0;
+                    if (sku) payload.additional_skus.push({ sku: sku, qty: q });
+                });
+                
+                // Send to API
+                const csrftoken = getCookie('csrftoken');
+                try {
+                    const endpoint = editId ? `/api/auth/workorders/${encodeURIComponent(editId)}/` : '/api/auth/workorders/';
+                    const method = editId ? 'PUT' : 'POST';
+                    const res = await fetch(endpoint, {
+                        method: method,
+                        credentials: 'same-origin',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': csrftoken,
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (res.ok) {
+                        const data = await res.json().catch(() => ({}));
+                        if (editId) {
+                            alert('Work order updated (id: ' + (data.id || '') + ')');
+                        } else {
+                            alert('Work order saved (id: ' + (data.id || '') + ')');
+                            form.reset();
+                        }
+                    } else if (res.status === 403) {
+                        alert('You must be logged in to save a work order.');
+                    } else {
+                        const err = await res.json().catch(() => ({}));
+                        console.error('Save failed', err);
+                    }
+                } catch (err) {
+                    console.error('Save failed', err);
+                }
+            });
+
+            // Also bind Save button directly in case form submit doesn't fire in some browsers
+            const saveBtn = document.getElementById('save-workorder');
+            if (saveBtn) {
+                saveBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    if (typeof form.requestSubmit === 'function') {
+                        form.requestSubmit();
+                    } else {
+                        form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+                    }
+                });
+            }
+        });
+
+        // When navigated with ?edit=<id>, fetch the workorder and populate the dashboard form
+        document.addEventListener('DOMContentLoaded', async () => {
+            const params = new URLSearchParams(window.location.search);
+            const editId = params.get('edit');
+            if (!editId) return;
+
+            const msg = (text, type='info') => {
+                const el = document.getElementById('message') || document.createElement('div');
+                if (!el.parentNode) document.querySelector('.container')?.prepend(el);
+                el.innerHTML = `<div class="alert alert-${type}">${text}</div>`;
+            };
+
+            try {
+                // ensure countries are loaded so we can map id->code and populate the select
+                const countries = await loadCountries();
+
+                const res = await fetch(`/api/auth/workorders/${encodeURIComponent(editId)}/`, { credentials: 'same-origin' });
+                if (!res.ok) {
+                    msg('Unable to load work order for editing.', 'danger');
+                    return;
+                }
+                const data = await res.json();
+
+                // Map country value to the country select value (uses country.code)
+                let countryCode = '';
+                if (data.country) {
+                    if (typeof data.country === 'string') countryCode = data.country;
+                    else if (typeof data.country === 'number') {
+                        const found = Array.isArray(countries) ? countries.find(c => c.id == data.country) : undefined;
+                        if (found) countryCode = found.code;
+                    } else if (typeof data.country === 'object') {
+                        countryCode = data.country.country_name || data.country.name || '';
+                    }
+                }
+
+                // Populate simple fields
+                (document.getElementById('project_name') || {}).value = data.work_order_number || '';
+                (document.getElementById('client') || {}).value = data.client || '';
+                (document.getElementById('work_order_date') || {}).value = data.work_order_date || '';
+                (document.getElementById('google_legal_entity') || {}).value = data.google_legal_entity || '';
+                (document.getElementById('google_bill_to_address') || {}).value = data.google_bill_to_address || '';
+                (document.getElementById('google_ship_to_address') || {}).value = data.google_ship_to_address || '';
+                (document.getElementById('sector') || {}).value = data.sector || '';
+                (document.getElementById('term') || {}).value = data.term || '';
+                (document.getElementById('support') || {}).value = data.support || '';
+                (document.getElementById('notes') || {}).value = data.notes || '';
+
+                // Set country and trigger SKU population
+                if (countryCode) {
+                    const countrySel = document.getElementById('Country');
+                    if (countrySel) {
+                        countrySel.value = countryCode;
+                        countrySel.dispatchEvent(new Event('change', { bubbles: true }));
+
+                        // wait for SKU selects to be populated (or timeout)
+                        await new Promise(resolve => {
+                            const start = Date.now();
+                            (function wait() {
+                                const p = document.querySelector('.primary-sku-select');
+                                if (p && p.options && p.options.length > 1) return resolve();
+                                if (Date.now() - start > 3000) return resolve();
+                                setTimeout(wait, 100);
+                            })();
+                        });
+
+                        // populate primary SKUs from work order details response (if available)
+                        try {
+                            const primarySelects = Array.from(document.querySelectorAll('.primary-sku-select'));
+                            (data.primary_skus || []).forEach((item, idx) => {
+                                if (!primarySelects[idx]) return;
+                                primarySelects[idx].value = item.sku_name || '';
+                                const qty = primarySelects[idx].closest('tr')?.querySelector('input[type="number"]');
+                                if (qty) qty.value = item.qty || 0;
+                            });
+                        } catch (e) { console.warn('Failed to populate primary SKUs', e); }
+
+                        // populate additional SKUs
+                        try {
+                            const additionalSelects = Array.from(document.querySelectorAll('.additional-sku-select'));
+                            (data.additional_skus || []).forEach((item, idx) => {
+                                if (!additionalSelects[idx]) return;
+                                additionalSelects[idx].value = item.sku_name || '';
+                                const qty = additionalSelects[idx].closest('tr')?.querySelector('input[type="number"]');
+                                if (qty) qty.value = item.qty || 0;
+                            });
+                        } catch (e) { console.warn('Failed to populate additional SKUs', e); }
+                    }
+                }
+
+                // remove query param so reloading doesn't re-trigger
+                try { history.replaceState(null, '', window.location.pathname); } catch (e) {}
+            } catch (err) {
+                console.error('Error loading work order for edit', err);
+                msg('Error loading work order for editing.', 'danger');
+            }
+        });
+
+    })();
+</script>
+{% endblock %}

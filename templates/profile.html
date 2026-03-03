@@ -1,0 +1,358 @@
+{% extends 'base.html' %}
+
+{% block title %}Profile - DjangoApp{% endblock %}
+
+{% block extra_css %}
+<style>
+    .profile-container {
+        padding: 40px 0;
+    }
+
+    .profile-header {
+        background: white;
+        border-radius: 20px;
+        padding: 40px;
+        margin-bottom: 30px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        text-align: center;
+    }
+
+    .profile-avatar {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 20px;
+        font-size: 3rem;
+        color: white;
+        font-weight: 700;
+        border: 5px solid white;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+
+    .profile-avatar img {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+
+    .profile-name {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: var(--dark-color);
+        margin-bottom: 5px;
+    }
+
+    .profile-email {
+        color: #6b7280;
+        font-size: 1.1rem;
+        margin-bottom: 20px;
+    }
+
+    .profile-badge {
+        display: inline-block;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        margin: 5px;
+    }
+
+    .profile-card {
+        background: white;
+        border-radius: 15px;
+        padding: 30px;
+        margin-bottom: 30px;
+    }
+
+    .profile-card h5 {
+        font-weight: 700;
+        color: var(--dark-color);
+        margin-bottom: 25px;
+        padding-bottom: 15px;
+        border-bottom: 2px solid #f3f4f6;
+    }
+
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 15px 0;
+        border-bottom: 1px solid #f3f4f6;
+    }
+
+    .info-row:last-child {
+        border-bottom: none;
+    }
+
+    .info-label {
+        font-weight: 600;
+        color: #6b7280;
+    }
+
+    .info-value {
+        color: var(--dark-color);
+        font-weight: 500;
+    }
+
+    .edit-btn {
+        width: 100%;
+        margin-top: 10px;
+    }
+
+    .tab-content {
+        padding-top: 20px;
+    }
+
+    .nav-tabs {
+        border-bottom: 2px solid #e5e7eb;
+    }
+
+    .nav-tabs .nav-link {
+        border: none;
+        color: #6b7280;
+        font-weight: 600;
+        padding: 12px 24px;
+        border-bottom: 3px solid transparent;
+        transition: all 0.3s;
+    }
+
+    .nav-tabs .nav-link:hover {
+        border-color: transparent;
+        color: var(--primary-color);
+    }
+
+    .nav-tabs .nav-link.active {
+        color: var(--primary-color);
+        border-bottom-color: var(--primary-color);
+        background: transparent;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="profile-container">
+    <div class="container">
+        <!-- Profile Header -->
+        <div class="profile-header">
+            <div class="profile-avatar">
+                {% if user.profile_picture %}
+                    <img src="{{ user.profile_picture.url }}" alt="{{ user.get_full_name }}">
+                {% else %}
+                    {{ user.first_name.0|default:user.email.0|upper }}
+                {% endif %}
+            </div>
+            <h2 class="profile-name">{{ user.get_full_name|default:"User" }}</h2>
+            <p class="profile-email">{{ user.email }}</p>
+            <div>
+                {% if user.is_staff %}
+                <span class="profile-badge">
+                    <i class="fas fa-crown me-1"></i> Admin
+                </span>
+                {% endif %}
+                <span class="profile-badge" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                    <i class="fas fa-check-circle me-1"></i> Active
+                </span>
+            </div>
+        </div>
+
+        <!-- Profile Content -->
+        <div class="row">
+            <div class="col-lg-8">
+                <!-- Tabs -->
+                <div class="profile-card">
+                    <ul class="nav nav-tabs" id="profileTab" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button">
+                                <i class="fas fa-user me-2"></i> Overview
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="edit-tab" data-bs-toggle="tab" data-bs-target="#edit" type="button">
+                                <i class="fas fa-edit me-2"></i> Edit Profile
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="security-tab" data-bs-toggle="tab" data-bs-target="#security" type="button">
+                                <i class="fas fa-lock me-2"></i> Security
+                            </button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content" id="profileTabContent">
+                        <!-- Overview Tab -->
+                        <div class="tab-pane fade show active" id="overview">
+                            <div class="info-row">
+                                <span class="info-label">Full Name</span>
+                                <span class="info-value">{{ user.get_full_name|default:"Not set" }}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Email</span>
+                                <span class="info-value">{{ user.email }}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Phone</span>
+                                <span class="info-value">{{ user.phone_number|default:"Not set" }}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Birth Date</span>
+                                <span class="info-value">{{ user.birth_date|date:"F d, Y"|default:"Not set" }}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Bio</span>
+                                <span class="info-value">{{ user.bio|default:"No bio available" }}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Member Since</span>
+                                <span class="info-value">{{ user.date_joined|date:"F d, Y" }}</span>
+                            </div>
+                        </div>
+
+                        <!-- Edit Profile Tab -->
+                        <div class="tab-pane fade" id="edit">
+                            <form method="post" enctype="multipart/form-data">
+                                {% csrf_token %}
+                                
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">First Name</label>
+                                        <input type="text" class="form-control" name="first_name" value="{{ user.first_name }}">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Last Name</label>
+                                        <input type="text" class="form-control" name="last_name" value="{{ user.last_name }}">
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Email</label>
+                                    <input type="email" class="form-control" value="{{ user.email }}" disabled>
+                                    <small class="text-muted">Email cannot be changed</small>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Phone Number</label>
+                                    <input type="tel" class="form-control" name="phone_number" value="{{ user.phone_number }}" placeholder="+1234567890">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Birth Date</label>
+                                    <input type="date" class="form-control" name="birth_date" value="{{ user.birth_date|date:'Y-m-d' }}">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Bio</label>
+                                    <textarea class="form-control" name="bio" rows="4" placeholder="Tell us about yourself...">{{ user.bio }}</textarea>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Profile Picture</label>
+                                    <input type="file" class="form-control" name="profile_picture" accept="image/*">
+                                </div>
+
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save me-2"></i> Save Changes
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- Security Tab -->
+                        <div class="tab-pane fade" id="security">
+                            <form method="post">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="change_password">
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Current Password</label>
+                                    <input type="password" class="form-control" name="old_password" required>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">New Password</label>
+                                    <input type="password" class="form-control" name="new_password1" required>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Confirm New Password</label>
+                                    <input type="password" class="form-control" name="new_password2" required>
+                                </div>
+
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-key me-2"></i> Change Password
+                                </button>
+                            </form>
+
+                            <hr class="my-4">
+
+                            <h6 class="mb-3">Two-Factor Authentication</h6>
+                            <p class="text-muted mb-3">Add an extra layer of security to your account</p>
+                            <button class="btn btn-outline-primary">
+                                <i class="fas fa-shield-alt me-2"></i> Enable 2FA
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="col-lg-4">
+                <!-- Account Stats -->
+                <div class="profile-card">
+                    <h5><i class="fas fa-chart-pie me-2"></i> Account Stats</h5>
+                    
+                    <div class="info-row">
+                        <span class="info-label">
+                            <i class="fas fa-tasks text-primary me-2"></i> Total Tasks
+                        </span>
+                        <span class="info-value">24</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">
+                            <i class="fas fa-file text-success me-2"></i> Documents
+                        </span>
+                        <span class="info-value">12</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">
+                            <i class="fas fa-users text-info me-2"></i> Team Members
+                        </span>
+                        <span class="info-value">5</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">
+                            <i class="fas fa-star text-warning me-2"></i> Points
+                        </span>
+                        <span class="info-value">1,250</span>
+                    </div>
+                </div>
+
+                <!-- Quick Links -->
+                <div class="profile-card">
+                    <h5><i class="fas fa-link me-2"></i> Quick Links</h5>
+                    
+                    <a href="{% url 'dashboard' %}" class="btn btn-outline-primary w-100 mb-2">
+                        <i class="fas fa-tachometer-alt me-2"></i> Dashboard
+                    </a>
+                    <a href="#" class="btn btn-outline-primary w-100 mb-2">
+                        <i class="fas fa-cog me-2"></i> Settings
+                    </a>
+                    <a href="#" class="btn btn-outline-primary w-100 mb-2">
+                        <i class="fas fa-question-circle me-2"></i> Help Center
+                    </a>
+                    <form method="post" action="{% url 'logout' %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-danger w-100">
+                            <i class="fas fa-sign-out-alt me-2"></i> Logout
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

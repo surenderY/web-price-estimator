@@ -1,0 +1,244 @@
+{% extends 'base.html' %}
+
+{% block title %}SKUs Management - DjangoApp{% endblock %}
+
+{% block content %}
+<style>
+    /* Make Bootstrap card headers bold and slightly larger on this page */
+    .card-header {
+        font-weight: 700;
+        font-size: 1.05rem; /* slightly larger */
+        line-height: 1.2;
+    }
+</style>
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3>SKU Management</h3>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <div class="row g-3 align-items-center">
+                <div class="col-12 col-md-6">
+                    <label for="country-select" class="form-label">Select Country</label>
+                    <select id="country-select" class="form-select">
+                        {% for c in countries %}
+                            <option value="{{ c.code }}" {% if selected_country and c.id == selected_country.id %}selected{% endif %}>{{ c.name }} ({{ c.code }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">All Master SKUs</div>
+                <div class="card-body" style="max-height:60vh; overflow:auto;">
+                    <ul class="list-group" id="master-skus-list">
+                        {% for sku in master_skus %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center" data-sku-id="{{ sku.id }}" data-sku-type="{{ sku.sku_type|lower }}">
+                                <div>
+                                    <strong>{{ sku.master_sku_name }}</strong>
+                                    <div class="text-muted small">Partner: {{ sku.partner_sku_name }}</div>
+                                </div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge bg-secondary">{{ sku.sku_type }}</span>
+                                    <button class="btn btn-sm btn-outline-primary sku-action-btn" data-action="add">Add</button>
+                                </div>
+                            </li>
+                        {% empty %}
+                            <li class="list-group-item">No master SKUs found.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">SKUs for <span id="country-name">{% if selected_country %}{{ selected_country.name }}{% else %}--{% endif %}</span></div>
+                <div class="card-body" style="max-height:60vh; overflow:auto;">
+                    <h6>Primary SKUs</h6>
+                    <ul class="list-group mb-3" id="country-primary-skus">
+                        {% if selected_country %}
+                            {% for s in selected_country.primary_skus.all %}
+                                <li class="list-group-item">{{ s.master_sku_name }} <small class="text-muted">({{ s.partner_sku_name }})</small></li>
+                            {% empty %}
+                                <li class="list-group-item text-muted">No primary SKUs for this country.</li>
+                            {% endfor %}
+                        {% else %}
+                            <li class="list-group-item text-muted">No country selected.</li>
+                        {% endif %}
+                    </ul>
+
+                    <h6>Additional SKUs</h6>
+                    <ul class="list-group" id="country-additional-skus">
+                        {% if selected_country %}
+                            {% for s in selected_country.additional_skus.all %}
+                                <li class="list-group-item">{{ s.master_sku_name }} <small class="text-muted">({{ s.partner_sku_name }})</small></li>
+                            {% empty %}
+                                <li class="list-group-item text-muted">No additional SKUs for this country.</li>
+                            {% endfor %}
+                        {% else %}
+                            <li class="list-group-item text-muted">No country selected.</li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    async function loadCountrySkus(code) {
+        const primaryEl = document.getElementById('country-primary-skus');
+        const additionalEl = document.getElementById('country-additional-skus');
+        const countryNameEl = document.getElementById('country-name');
+
+        primaryEl.innerHTML = '<li class="list-group-item text-muted">Loading...</li>';
+        additionalEl.innerHTML = '<li class="list-group-item text-muted">Loading...</li>';
+
+        try {
+            const res = await fetch(`/api/auth/countries/${encodeURIComponent(code)}/skus/`, { credentials: 'same-origin' });
+            if (!res.ok) throw new Error('Failed to fetch');
+            const data = await res.json();
+
+            // update name if available from select option
+            const sel = document.getElementById('country-select');
+            const opt = sel.options[sel.selectedIndex];
+            countryNameEl.textContent = opt ? opt.text : code;
+
+            primaryEl.innerHTML = '';
+            additionalEl.innerHTML = '';
+
+            // data.primary_skus/ additional_skus are arrays of objects {id, master_sku_name, partner_sku_name, sku_type}
+            const primaryIds = new Set();
+            const additionalIds = new Set();
+
+            if (Array.isArray(data.primary_skus) && data.primary_skus.length) {
+                data.primary_skus.forEach(s => {
+                    primaryIds.add(String(s.id));
+                    const li = document.createElement('li');
+                    li.className = 'list-group-item';
+                    // li.textContent = s.master_sku_name + (s.partner_sku_name ? ` (${s.partner_sku_name})` : '');
+                    li.textContent = s.master_sku_name;
+                    primaryEl.appendChild(li);
+                });
+            } else {
+                primaryEl.innerHTML = '<li class="list-group-item text-muted">No primary SKUs for this country.</li>';
+            }
+
+            if (Array.isArray(data.additional_skus) && data.additional_skus.length) {
+                data.additional_skus.forEach(s => {
+                    additionalIds.add(String(s.id));
+                    const li = document.createElement('li');
+                    li.className = 'list-group-item';
+                    li.textContent = s.master_sku_name + (s.partner_sku_name ? ` (${s.partner_sku_name})` : '');
+                    additionalEl.appendChild(li);
+                });
+            } else {
+                additionalEl.innerHTML = '<li class="list-group-item text-muted">No additional SKUs for this country.</li>';
+            }
+
+            // Update master list buttons
+            updateMasterListButtons(primaryIds, additionalIds, code);
+
+        } catch (err) {
+            console.error('Error loading country skus', err);
+            primaryEl.innerHTML = '<li class="list-group-item text-danger">Failed to load.</li>';
+            additionalEl.innerHTML = '<li class="list-group-item text-danger">Failed to load.</li>';
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const sel = document.getElementById('country-select');
+        if (!sel) return;
+        sel.addEventListener('change', function () {
+            loadCountrySkus(this.value);
+        });
+
+        // initial load
+        loadCountrySkus(sel.value || 'US');
+    });
+
+    function updateMasterListButtons(primaryIds, additionalIds, countryCode) {
+        const items = document.querySelectorAll('#master-skus-list li[data-sku-id]');
+        items.forEach(li => {
+            const skuId = li.getAttribute('data-sku-id');
+            const skuType = (li.getAttribute('data-sku-type') || 'primary').toLowerCase();
+            const btn = li.querySelector('.sku-action-btn');
+            if (!btn) return;
+
+            // Determine membership
+            const isInPrimary = primaryIds.has(skuId);
+            const isInAdditional = additionalIds.has(skuId);
+
+            // For primary-type SKUs: toggle add/remove based on primary membership
+            if (skuType === 'primary') {
+                if (isInPrimary) {
+                    btn.textContent = 'Remove';
+                    btn.classList.remove('btn-outline-primary');
+                    btn.classList.add('btn-outline-danger');
+                    btn.dataset.action = 'remove';
+                } else {
+                    btn.textContent = 'Add';
+                    btn.classList.remove('btn-outline-danger');
+                    btn.classList.add('btn-outline-primary');
+                    btn.dataset.action = 'add';
+                }
+            } else {
+                // additional SKUs
+                if (isInAdditional) {
+                    btn.textContent = 'Remove';
+                    btn.classList.remove('btn-outline-primary');
+                    btn.classList.add('btn-outline-danger');
+                    btn.dataset.action = 'remove';
+                } else {
+                    btn.textContent = 'Add';
+                    btn.classList.remove('btn-outline-danger');
+                    btn.classList.add('btn-outline-primary');
+                    btn.dataset.action = 'add';
+                }
+            }
+
+            // attach click handler
+            btn.onclick = () => {
+                const action = btn.dataset.action;
+                modifyCountrySku(countryCode, skuId, skuType, action)
+                    .then(() => loadCountrySkus(countryCode))
+                    .catch(err => console.error(err));
+            };
+        });
+    }
+
+    async function modifyCountrySku(countryCode, skuId, skuType, action) {
+        try {
+            const csrftoken = (typeof getCookie === 'function') ? getCookie('csrftoken') : null;
+            const res = await fetch(`/api/auth/countries/${encodeURIComponent(countryCode)}/skus/manage/`, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    ...(csrftoken ? { 'X-CSRFToken': csrftoken } : {})
+                },
+                body: JSON.stringify({ sku_id: skuId, sku_type: skuType, action: action })
+            });
+            if (!res.ok) {
+                const err = await res.json().catch(() => null);
+                throw new Error(err && err.detail ? err.detail : 'Failed to modify');
+            }
+            return await res.json();
+        } catch (err) {
+            alert('Failed to update SKU: ' + err.message);
+            throw err;
+        }
+    }
+</script>
+{% endblock %}

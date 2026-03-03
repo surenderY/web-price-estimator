@@ -1,0 +1,307 @@
+{% extends 'base.html' %}
+
+{% block title %}Register - DjangoApp{% endblock %}
+
+{% block extra_css %}
+<style>
+    .register-container {
+        /* min-height: calc(100vh - 200px); */
+        /* Use full viewport height so the card centers on the page */
+        height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 10px 15px;
+    }
+
+    .register-card {
+        max-width: 550px;
+        width: 100%;
+        background: white;
+        border-radius: 20px;
+        overflow: hidden;
+        animation: slideUp 0.5s ease-out;
+        margin: 0 auto;
+    }
+
+    @keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .register-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 10px 30px;
+        text-align: center;
+    }
+
+    .register-header i {
+        font-size: 3rem;
+        margin-bottom: 15px;
+    }
+
+    .register-header h2 {
+        font-weight: 700;
+        margin-bottom: 5px;
+    }
+
+    .register-body {
+        padding: 40px 30px;
+    }
+
+    .password-strength {
+        height: 5px;
+        border-radius: 3px;
+        margin-top: 5px;
+        background: #e5e7eb;
+        transition: all 0.3s;
+    }
+
+    .password-strength.weak {
+        width: 33%;
+        background: #ef4444;
+    }
+
+    .password-strength.medium {
+        width: 66%;
+        background: #f59e0b;
+    }
+
+    .password-strength.strong {
+        width: 100%;
+        background: #10b981;
+    }
+
+    .password-wrapper {
+        position: relative;
+    }
+
+    .password-toggle {
+        position: absolute;
+        right: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        cursor: pointer;
+        color: #6b7280;
+    }
+
+    .error-list {
+        list-style: none;
+        padding: 0;
+        margin: 5px 0 0 0;
+        font-size: 0.875rem;
+    }
+
+    .error-list li {
+        color: #dc3545;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="register-container">
+    <div class="register-card">
+        <div class="register-header">
+            <!-- <i class="fas fa-user-plus"></i> -->
+            <h2>Create Account</h2>
+            <!-- <p class="mb-0">Join us today!</p> -->
+        </div>
+        
+        <div class="register-body">
+            <form method="post" action="{% url 'register' %}" id="registerForm">
+                {% csrf_token %}
+                
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="id_first_name" class="form-label">
+                            <i class="fas fa-user me-1"></i> First Name
+                        </label>
+                        <input 
+                            type="text" 
+                            class="form-control {% if form.first_name.errors %}is-invalid{% endif %}" 
+                            id="id_first_name" 
+                            name="first_name" 
+                            placeholder="John"
+                            value="{{ form.first_name.value|default:'' }}"
+                        >
+                        {% if form.first_name.errors %}
+                        <div class="invalid-feedback">
+                            {{ form.first_name.errors.0 }}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label for="id_last_name" class="form-label">
+                            <i class="fas fa-user me-1"></i> Last Name
+                        </label>
+                        <input 
+                            type="text" 
+                            class="form-control {% if form.last_name.errors %}is-invalid{% endif %}" 
+                            id="id_last_name" 
+                            name="last_name" 
+                            placeholder="Doe"
+                            value="{{ form.last_name.value|default:'' }}"
+                        >
+                        {% if form.last_name.errors %}
+                        <div class="invalid-feedback">
+                            {{ form.last_name.errors.0 }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="id_email" class="form-label">
+                        <i class="fas fa-envelope me-1"></i> Email Address
+                    </label>
+                    <input 
+                        type="email" 
+                        class="form-control {% if form.email.errors %}is-invalid{% endif %}" 
+                        id="id_email" 
+                        name="email" 
+                        placeholder="john.doe@example.com"
+                        value="{{ form.email.value|default:'' }}"
+                        required
+                    >
+                    {% if form.email.errors %}
+                    <div class="invalid-feedback">
+                        {{ form.email.errors.0 }}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="mb-3">
+                    <label for="id_password1" class="form-label">
+                        <i class="fas fa-key me-1"></i> Password
+                    </label>
+                    <div class="password-wrapper">
+                        <input 
+                            type="password" 
+                            class="form-control {% if form.password1.errors %}is-invalid{% endif %}" 
+                            id="id_password1" 
+                            name="password1" 
+                            placeholder="Create a strong password"
+                            required
+                        >
+                        <i class="fas fa-eye password-toggle" id="togglePassword1"></i>
+                    </div>
+                    <div class="password-strength" id="passwordStrength"></div>
+                    {% if form.password1.errors %}
+                    <ul class="error-list">
+                        {% for error in form.password1.errors %}
+                        <li><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                    <small class="text-muted">
+                        Password must be at least 8 characters with letters and numbers
+                    </small>
+                </div>
+
+                <div class="mb-4">
+                    <label for="id_password2" class="form-label">
+                        <i class="fas fa-key me-1"></i> Confirm Password
+                    </label>
+                    <div class="password-wrapper">
+                        <input 
+                            type="password" 
+                            class="form-control {% if form.password2.errors %}is-invalid{% endif %}" 
+                            id="id_password2" 
+                            name="password2" 
+                            placeholder="Re-enter your password"
+                            required
+                        >
+                        <i class="fas fa-eye password-toggle" id="togglePassword2"></i>
+                    </div>
+                    {% if form.password2.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.password2.errors.0 }}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="form-check mb-4">
+                    <input class="form-check-input" type="checkbox" id="agreeTerms" required>
+                    <label class="form-check-label" for="agreeTerms">
+                        I agree to the <a href="#" style="color: var(--primary-color);">Terms & Conditions</a>
+                    </label>
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100 mb-3">
+                    <i class="fas fa-user-plus me-2"></i> Create Account
+                </button>
+
+                <div class="text-center">
+                    <span class="text-muted">Already have an account?</span>
+                    <a href="{% url 'login' %}" class="text-decoration-none ms-1" style="color: var(--primary-color); font-weight: 600;">
+                        Sign In
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Password toggle for both fields
+    ['togglePassword1', 'togglePassword2'].forEach((id, index) => {
+        const toggle = document.getElementById(id);
+        const password = document.getElementById(`id_password${index + 1}`);
+        
+        toggle.addEventListener('click', function() {
+            const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
+            password.setAttribute('type', type);
+            this.classList.toggle('fa-eye');
+            this.classList.toggle('fa-eye-slash');
+        });
+    });
+
+    // Password strength indicator
+    const passwordInput = document.getElementById('id_password1');
+    const strengthBar = document.getElementById('passwordStrength');
+
+    passwordInput.addEventListener('input', function() {
+        const password = this.value;
+        let strength = 0;
+
+        if (password.length >= 8) strength++;
+        if (password.match(/[a-z]/) && password.match(/[A-Z]/)) strength++;
+        if (password.match(/[0-9]/)) strength++;
+        if (password.match(/[^a-zA-Z0-9]/)) strength++;
+
+        strengthBar.className = 'password-strength';
+        if (strength === 0) {
+            strengthBar.style.display = 'none';
+        } else if (strength <= 2) {
+            strengthBar.classList.add('weak');
+            strengthBar.style.display = 'block';
+        } else if (strength === 3) {
+            strengthBar.classList.add('medium');
+            strengthBar.style.display = 'block';
+        } else {
+            strengthBar.classList.add('strong');
+            strengthBar.style.display = 'block';
+        }
+    });
+
+    // Password match validation
+    const password2Input = document.getElementById('id_password2');
+    password2Input.addEventListener('input', function() {
+        if (this.value && this.value !== passwordInput.value) {
+            this.classList.add('is-invalid');
+        } else {
+            this.classList.remove('is-invalid');
+        }
+    });
+</script>
+{% endblock %}

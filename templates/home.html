@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+
+{% block title %}Home - DjangoApp{% endblock %}
+
+{% block extra_css %}
+<style>
+    .hero-section {
+        min-height: 80vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        color: white;
+        padding: 40px 15px;
+    }
+
+    .hero-content h1 {
+        font-size: 3.5rem;
+        font-weight: 800;
+        margin-bottom: 20px;
+        animation: fadeInUp 0.8s ease-out;
+        align-self: center;
+        text-align: center;
+    }
+
+    .hero-content p {
+        font-size: 1.3rem;
+        margin-bottom: 30px;
+        opacity: 0.9;
+        animation: fadeInUp 1s ease-out;
+        align-items: center;
+        text-align: center;  
+    }
+
+    .btn-light {
+        background: white;
+        color: var(--primary-color);
+    }
+
+    .btn-light:hover {
+        background: #f3f4f6;
+        transform: translateY(-2px);
+    }
+
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero-section">
+    <div class="container">
+        <div class="hero-content">
+            <h1>Work Order Management</h1>
+            <p>Using this tool, we can generate work oders for different countries.</p>
+            <!-- <div class="hero-buttons">
+                {% if user.is_authenticated %}
+                    <a href="{% url 'dashboard' %}" class="btn btn-light btn-lg">
+                        <i class="fas fa-tachometer-alt me-2"></i> Go to Dashboard
+                    </a>
+                {% else %}
+                    <a href="{% url 'register' %}" class="btn btn-light btn-lg">
+                        <i class="fas fa-rocket me-2"></i> Get Started
+                    </a>
+                    <a href="{% url 'login' %}" class="btn btn-outline-light btn-lg">
+                        <i class="fas fa-sign-in-alt me-2"></i> Sign In
+                    </a>
+                {% endif %}
+            </div> -->
+        </div>
+    </div>
+</section>
+
+{% endblock %}

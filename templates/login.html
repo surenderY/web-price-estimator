@@ -1,0 +1,197 @@
+{% extends 'base.html' %}
+
+{% block title %}Login - DjangoApp{% endblock %}
+
+{% block extra_css %}
+<style>
+    .login-container {
+        /* Use full viewport height so the card centers on the page */
+        height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 40px 15px;
+    }
+
+    .login-card {
+        max-width: 450px;
+        width: 100%;
+        background: white;
+        border-radius: 20px;
+        overflow: hidden;
+        animation: slideUp 0.5s ease-out;
+        margin: 0 auto;
+    }
+
+    @keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .login-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 10px 30px;
+        text-align: center;
+    }
+
+    .login-header i {
+        font-size: 3rem;
+        margin-bottom: 15px;
+    }
+
+    .login-header h2 {
+        font-weight: 700;
+        margin-bottom: 5px;
+    }
+
+    .login-body {
+        padding: 40px 30px;
+    }
+
+    .password-toggle {
+        position: absolute;
+        right: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        cursor: pointer;
+        color: #6b7280;
+    }
+
+    .password-wrapper {
+        position: relative;
+    }
+
+    .error-message {
+        background: #fee2e2;
+        color: #991b1b;
+        padding: 12px 15px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+        font-size: 0.9rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="login-container">
+    <div class="login-card">
+        <div class="login-header">
+            <i class="fas fa-lock"></i>
+            <h2>Welcome Back</h2>
+            <p class="mb-0">Sign in to your account</p>
+        </div>
+        
+        <div class="login-body">
+            {% if form.non_field_errors %}
+            <div class="error-message">
+                <i class="fas fa-exclamation-circle me-2"></i>
+                {{ form.non_field_errors.0 }}
+            </div>
+            {% endif %}
+
+            <form method="post" action="{% url 'login' %}" id="loginForm">
+                {% csrf_token %}
+                
+                <div class="mb-3">
+                    <label for="id_username" class="form-label">
+                        <i class="fas fa-envelope me-1"></i> Email Address
+                    </label>
+                    <input 
+                        type="email" 
+                        class="form-control {% if form.username.errors %}is-invalid{% endif %}" 
+                        id="id_username" 
+                        name="username" 
+                        placeholder="Enter your email"
+                        value="{{ form.username.value|default:'' }}"
+                        required
+                    >
+                    {% if form.username.errors %}
+                    <div class="invalid-feedback">
+                        {{ form.username.errors.0 }}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="mb-3">
+                    <label for="id_password" class="form-label">
+                        <i class="fas fa-key me-1"></i> Password
+                    </label>
+                    <div class="password-wrapper">
+                        <input 
+                            type="password" 
+                            class="form-control {% if form.password.errors %}is-invalid{% endif %}" 
+                            id="id_password" 
+                            name="password" 
+                            placeholder="Enter your password"
+                            required
+                        >
+                        <i class="fas fa-eye password-toggle" id="togglePassword"></i>
+                    </div>
+                    {% if form.password.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.password.errors.0 }}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="rememberMe" name="remember">
+                        <label class="form-check-label" for="rememberMe">
+                            Remember me
+                        </label>
+                    </div>
+                    <a href="#" class="text-decoration-none" style="color: var(--primary-color);" onclick="alert('Password reset feature coming soon!'); return false;">
+                        Forgot password?
+                    </a>
+                </div> -->
+
+                <button type="submit" class="btn btn-primary w-100 mb-3">
+                    <i class="fas fa-sign-in-alt me-2"></i> Sign In
+                </button>
+
+                <div class="text-center">
+                    <span class="text-muted">Don't have an account?</span>
+                    <a href="{% url 'register' %}" class="text-decoration-none ms-1" style="color: var(--primary-color); font-weight: 600;">
+                        Sign Up
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Password toggle
+    const togglePassword = document.getElementById('togglePassword');
+    const passwordInput = document.getElementById('id_password');
+
+    togglePassword.addEventListener('click', function() {
+        const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+        passwordInput.setAttribute('type', type);
+        this.classList.toggle('fa-eye');
+        this.classList.toggle('fa-eye-slash');
+    });
+
+    // Form validation
+    const loginForm = document.getElementById('loginForm');
+    loginForm.addEventListener('submit', function(e) {
+        const email = document.getElementById('id_username').value;
+        const password = document.getElementById('id_password').value;
+
+        if (!email || !password) {
+            e.preventDefault();
+            alert('Please fill in all fields');
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,248 @@
+{% extends 'base.html' %}
+
+{% block title %}Price Estimator - DjangoApp{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3>Price Estimator</h3>
+    </div>
+
+    <div id="message" class="mb-3"></div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="row g-3 align-items-end">
+                <div class="col-12 col-md-8">
+                    <label for="workorder-select" class="form-label">Select Work Order</label>
+                    <select id="workorder-select" class="form-select">
+                        <option value="">Loading work orders...</option>
+                    </select>
+                </div>
+                <div class="col-12 col-md-4 d-flex gap-2 align-items-center">
+                    <button id="estimate-btn" type="button" class="btn btn-primary">Estimate</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Existing estimators list -->
+    <div class="card mt-3">
+        <div class="card-header">Existing Price Estimators</div>
+        <div class="card-body" id="estimators-list">
+            <div class="text-muted">Loading estimators...</div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Helper to read CSRF token from cookie
+    // function getCookie(name) {
+    //     const value = `; ${document.cookie}`;
+    //     const parts = value.split(`; ${name}=`);
+    //     if (parts.length === 2) return parts.pop().split(';').shift();
+    // }
+
+    async function downloadExcelFile(url, options = {}) {
+        try {
+            const response = await fetch(url, Object.assign({
+                method: 'GET',
+                credentials: 'same-origin',
+                headers: {
+                    'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/octet-stream',
+                },
+            }, options));
+
+            if (!response.ok) {
+                throw new Error(`Download failed: ${response.statusText}`);
+            }
+
+            // Get filename from Content-Disposition header
+            const disposition = response.headers.get('Content-Disposition');
+            const filename = disposition ? disposition.split('filename=')[1]?.replace(/"/g, '') : 'download.xlsx';
+
+            const blob = await response.blob();
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            link.click();
+            URL.revokeObjectURL(link.href);
+            return { success: true, filename };
+
+        } catch (error) {
+            console.error('Excel download error:', error);
+            return { success: false, error: error.message };
+        }
+    }
+
+    async function loadWorkOrdersForEstimate() {
+        const msgEl = document.getElementById('message');
+        const select = document.getElementById('workorder-select');
+        if (!select) return;
+        select.innerHTML = '<option value="">Loading work orders...</option>';
+
+        try {
+            const res = await fetch('/api/auth/workorders/', { credentials: 'same-origin' });
+            if (res.status === 403) {
+                msgEl.innerHTML = '<div class="alert alert-warning">You must be logged in to view work orders.</div>';
+                select.innerHTML = '<option value="">--</option>';
+                return;
+            }
+            if (!res.ok) throw new Error('Network response not ok');
+
+            const data = await res.json();
+            const items = Array.isArray(data) ? data : (data.results || []);
+
+            if (!items.length) {
+                select.innerHTML = '<option value="">No work orders found.</option>';
+                return;
+            }
+
+            const escapeHtml = (s) => {
+                if (s == null) return '';
+                return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+            };
+
+            select.innerHTML = '<option value="">Select a work order</option>';
+            items.forEach(w => {
+                const opt = document.createElement('option');
+                opt.value = w.id || '';
+                const labelParts = [
+                    w.work_order_number || `WO #${w.id || ''}`,
+                    w.client ? `- ${w.client}` : ''
+                ];
+                opt.textContent = escapeHtml(labelParts.join(' ').trim());
+                select.appendChild(opt);
+            });
+        } catch (err) {
+            console.error('Failed to load work orders', err);
+            msgEl.innerHTML = '<div class="alert alert-danger">Failed to load work orders.</div>';
+            select.innerHTML = '<option value="">Error loading work orders.</option>';
+        }
+    }
+
+    // Load list of existing estimator files and render them
+    async function loadEstimatorsList() {
+        const containerId = 'estimators-list';
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        container.innerHTML = '<div class="text-muted">Loading estimators...</div>';
+
+        try {
+            const res = await fetch('/api/auth/workorders/price-estimate/list/', { credentials: 'same-origin' });
+            if (res.status === 403) {
+                container.innerHTML = '<div class="alert alert-warning">You must be logged in to view estimators.</div>';
+                return;
+            }
+            if (!res.ok) throw new Error('Network response not ok');
+
+            const list = await res.json();
+            if (!Array.isArray(list) || !list.length) {
+                container.innerHTML = '<div class="text-muted">No estimators found.</div>';
+                return;
+            }
+
+            const ul = document.createElement('ul');
+            ul.className = 'list-group';
+
+            list.forEach(item => {
+                const li = document.createElement('li');
+                li.className = 'list-group-item d-flex justify-content-between align-items-center';
+
+                const left = document.createElement('div');
+                const name = document.createElement('div');
+                name.textContent = item.file_name;
+                const meta = document.createElement('small');
+                // const mtime = item.mtime ? new Date(item.mtime * 1000).toLocaleString() : '';
+                // console.log('Estimator item.mtime', mtime);
+                const size = item.size ? ` (${Math.round(item.size/1024)} KB)` : '';
+                meta.className = 'text-muted';
+                meta.textContent = `${item.workorder_number} ${item.user_name}${size}`.trim();
+                left.appendChild(name);
+                left.appendChild(meta);
+
+                const right = document.createElement('div');
+                const dl = document.createElement('button');
+                dl.className = 'btn btn-sm btn-outline-primary';
+                dl.textContent = 'Download';
+                dl.onclick = () => {
+                    const encoded = encodeURIComponent(item.file_name);
+                    // include workorder id for permission validation
+                    downloadExcelFile(`/api/auth/workorders/price-estimate/download/?file_name=${encoded}&workorder=${encodeURIComponent(item.workorder_id)}`)
+                        .then(result => {
+                            if (result.success) {
+                                alert('Downloaded: ' + result.filename);
+                            } else {
+                                alert('Download failed: ' + result.error);
+                            }
+                        })
+                        .catch(err => {
+                            console.error('Download error', err);
+                            alert('Failed to download file.');
+                        });
+                };
+                right.appendChild(dl);
+
+                li.appendChild(left);
+                li.appendChild(right);
+                ul.appendChild(li);
+            });
+
+            container.innerHTML = '';
+            container.appendChild(ul);
+
+        } catch (err) {
+            console.error('Failed to load estimators list', err);
+            container.innerHTML = '<div class="alert alert-danger">Failed to load estimators.</div>';
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        loadWorkOrdersForEstimate();
+        loadEstimatorsList();
+
+        const btn = document.getElementById('estimate-btn');
+        const select = document.getElementById('workorder-select');
+        if (!btn || !select) return;
+        const csrftoken = getCookie('csrftoken');
+
+        btn.addEventListener('click', () => {
+            const id = select.value;
+            if (!id) {
+                alert('Please select a work order first.');
+                select.focus();
+                return;
+            }
+
+            fetch(`/api/auth/workorders/${id}/price-estimate/`, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken,
+                    'Accept': 'application/json'
+                }
+            })
+            .then(res => {
+                if (res.status === 403) {
+                    alert('You must be logged in to request a price estimate.');
+                    throw new Error('Forbidden');
+                }
+                if (!res.ok) throw new Error('Network response not ok');
+                return res.json();
+            })
+            .then(data => {
+                alert('Price estimate received: ' + JSON.stringify(data));
+                loadEstimatorsList();
+            })
+            .catch(err => {
+                console.error('Failed to request price estimate', err);
+                alert('Failed to request price estimate.');
+            });
+        });
+    });
+</script>
+{% endblock %}
